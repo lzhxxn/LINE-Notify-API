@@ -1,0 +1,54 @@
+<select id="selectEventLineToken" resultType="map">
+		SELECT  b.user_id,
+				line_token
+		FROM    MGR_SEARCH_EVENT a,
+				MGR_SEARCH_ALARM_RECEIVER b,
+				COM_USER c
+		WHERE   a.ruleset_id = b.ruleset_id
+		AND		b.user_id = c.user_id
+		AND     a.ruleset_id = #{ruleset_id}
+		AND     event_time   = #{event_time_src}
+		AND     a.event_seq  = #{event_seq}
+		AND     IFNULL(line_token, '') != ''
+</select>
+
+
+<insert id="insertAlarmEventLINE" parameterType="map">
+		INSERT INTO ALARM_LINE (
+			line_id,
+			from_user_id,
+			from_token,
+			to_user_id,
+			to_token,
+			sms_msg,
+			stat_flag,
+			reg_time
+		)
+		SELECT (SELECT IFNULL(MAX(line_id), 0) + (@rownum := @rownum + 1) FROM ALARM_LINE),
+				       #{from_user_id},
+				       (SELECT line_token FROM COM_USER WHERE user_id = #{from_user_id}),
+				       b.user_id,
+				       c.line_token,
+				       #{sms_msg},
+				       '0',
+				       DATE_FORMAT(NOW(), '%Y%m%d%H%i%s')
+		FROM   MGR_SEARCH_EVENT a,
+		       MGR_SEARCH_ALARM_RECEIVER b,
+		       COM_USER c,
+		       (SELECT @rownum := 0) s
+		WHERE  a.ruleset_id = b.ruleset_id
+		AND    b.user_id    = c.user_id
+		AND    a.ruleset_id = #{ruleset_id}
+		AND    event_time   = #{event_time_src}
+		AND    event_seq    = #{event_seq}
+		AND    IFNULL(mobile_no, '') != ''
+		AND    (b.user_id, a.group_cd) NOT IN (
+			SELECT r.user_id,
+			       cust_id
+			FROM   MGR_SEARCH_ALARM_RECEIVER r,
+			       COM_USER_CUST u
+			WHERE  r.user_id    = u.user_id
+			AND    r.ruleset_id = #{ruleset_id}
+			AND    cust_id     != IF(a.group_cd IS NOT NULL, a.group_cd, '')
+		)
+</insert>
