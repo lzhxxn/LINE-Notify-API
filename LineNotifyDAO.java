@@ -10,3 +10,13 @@
 		}
 		return list;
 	}
+	
+
+	public void insertAlarmEventLINE(Map<String, Object> m) {
+	SqlSession session = factory.openSession();
+	try {
+		session.insert("AlarmMapper.insertAlarmEventLINE", m);
+		session.commit();
+	} finally {
+		session.close();
+	}
